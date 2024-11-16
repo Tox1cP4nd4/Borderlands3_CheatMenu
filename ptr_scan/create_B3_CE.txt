@@ -1,0 +1,48 @@
+1) Searching for player ammo
+
+2) Found ammo on Cheat Engine. If i fix the value the ammo gets unlimited
+
+3) Identified witch ammo address was working to keep ammo unlimited
+
+4) Used this found address to pointer scan
+
+5) Found pointers and saved them.
+
+6) Restarted the game
+
+7) One offset worked:
+"Borderlands3.exe"+06B32358 388 150 470 8 70 -> 255077C0220
+
+8) With the static offset its possible to create the ammo cheat
+
+Uma coisa estranha
+Quando tenho 10 balas ele armazena na memoria 20 41 = 32d 65d
+quando atiro o valor 20 vai descendo de 4 em 4.
+
+desconfio que seja porque a interpretation seria FLOAT, entao por isso nao basta apenas converter de hexa para decimal!
+
+60 balas = 0x70 = 01110000
+
+Como interpretar 01110000 como um float?
+
+Encontrei a resposta, realmente tem relation com a forma como interpreta float.
+
+Foi util o site: https://www.scadacore.com/tools/programming-calculators/online-hex-converter/
+
+9) Found Z coord address, and then found offsets!!!
+
+"Borderlands3.exe"+06B4C4E0 228 168 10 5D0 38
+browsing memory region i can also see X and Y cords
+
+If ("Borderlands3.exe"+06B4C4E0 228 168 10 5D0 38) points to player Z coord, then
+"Borderlands3.exe"+06B4C4E0 228 168 10 5D0 38 - 228 points to the player itself ?
+
+10) found armor
+"Borderlands3.exe"+06B4C320 290 180 68 558 60
+
+11) After restarting game, lost armor and Z-coord pointers. Apparently, i need to restart
+the game a few times to make sure the offset is working. NO SEEMS LIKE I DIDNT LOOSE THEM. I just forgot to attach CE to the game.
+Actually pointers for armor and life aren't stable !!!
+
+10) Ponteiro denominado entidade 3 parece valido! restartei game e tem um inimigo immortal!!
+

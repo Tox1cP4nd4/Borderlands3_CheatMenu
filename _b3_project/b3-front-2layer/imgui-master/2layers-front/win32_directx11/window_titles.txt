@@ -1,0 +1,14 @@
+List of Windows with Titles and PIDs
+--------------------------------------
+Window Title: Dear ImGui DirectX11 Example, PID: 17636
+Window Title: PopupHost, PID: 6224
+Window Title: CiceroUIWndFrame, PID: 17652
+Window Title: Battery Meter, PID: 6224
+Window Title: System tray overflow window., PID: 6224
+Window Title: Menu, PID: 12792
+Window Title: CiceroUIWndFrame, PID: 11216
+Window Title: C:\Users\mythic-user\Desktop\learning_cheat_creation\g_borderlands3\_b3_project\b3-front-2layer\imgui-master\2layers-front\win32_directx11\Debug\bo3_2layers_front.exe, PID: 13084
+Window Title: DesktopWindowXamlSource, PID: 13084
+Window Title: Borderlands® 3  , PID: 17676
+Found Borderlands window!
+Window Title: Borderlands® 3  , PID: 17676
