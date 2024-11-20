@@ -14,6 +14,7 @@
 #include <iostream>
 #include "cheat_main.h"
 #include "cheat_init.h"
+#include <string> // toString
 
 // Data
 static ID3D11Device*            g_pd3dDevice = nullptr;
@@ -91,6 +92,7 @@ int main(int, char**)
     bool mod_menu = true;
     bool infinite_ammo = false;
     bool no_reload = false;
+    bool aimbot = false;
     bool fly_hack = false;
     bool god_mode = false;
     bool unlimited_armor = false;
@@ -139,7 +141,7 @@ int main(int, char**)
             //ImGui::ShowDemoWindow();
             ImVec2 initial_size(600, 400);  // Set your desired initial width and height
             ImGui::SetNextWindowSize(initial_size, ImGuiCond_FirstUseEver);  // Conditionally set it only on first use
-            ImGui::Begin("ToxicPanda", nullptr, ImGuiWindowFlags_NoCollapse);
+            ImGui::Begin("Xit do cria", nullptr, ImGuiWindowFlags_NoCollapse);
 
             //for (int i = 0; i < ImGuiCol_COUNT; i++)
             //{
@@ -194,6 +196,11 @@ int main(int, char**)
                         "CTRL+click on individual component to input value.\n");
                     ImGui::EndTabItem();
                 }
+                if (ImGui::BeginTabItem("Aimbot"))
+                {
+                    ImGui::Checkbox("Aimbot", &aimbot);
+                    ImGui::EndTabItem();
+                }
                 if (ImGui::BeginTabItem("Misc"))
                 {
                     ImGui::Text("Miscellaneous Configs");
@@ -230,7 +237,7 @@ int main(int, char**)
         /* ---> CHEAT FUNCTIONS STARTS HERE <--- */
         // ESP
         if (esp) {
-            Cheat::FVector* enemyCoords = cheat.ESP();
+            Cheat::Entity* enemyCoords = cheat.ESP();
             while (enemyCoords != nullptr) {
                 float distance = enemyCoords->z;
                 float width_at_distance_1_p1x = 60000.0f;
@@ -249,11 +256,23 @@ int main(int, char**)
                 ImVec2 p1(enemyCoords->x - p1x, enemyCoords->y);
                 ImVec2 p2(enemyCoords->x + p2x, enemyCoords->y + p2y);
 
-                // Draw rectangle
-                draw_list->AddRect(p1, p2, IM_COL32(esp_color[0], esp_color[1], esp_color[2], esp_color[3]), 5.0f);  // Red outline, thickness 5
+                // If alive, draw rectangle
+                int enemyHp = (int)enemyCoords->health;
+                ImU32 healthColor = 0xFF00FF00; // Green
+                if (enemyHp > 0) {
+                    if (enemyHp < 30) { healthColor = 0xFF0000FF; } // Red
+                    else if (enemyHp < 60) { healthColor = 0xFF00A5FF; } // Orange
+                    draw_list->AddRect(p1, p2, IM_COL32(esp_color[0], esp_color[1], esp_color[2], esp_color[3]), 5.0f);  // Red outline, thickness 5
+                    draw_list->AddText(ImVec2((float)p1.x, (float)p1.y - 20), 0xFFFFFFFF, "Health: ");
+                    draw_list->AddText(ImVec2((float)p1.x + 55, (float)p1.y - 20), healthColor, std::to_string(enemyHp).c_str());
+                }
                 enemyCoords = enemyCoords->next;
             }
            //Sleep(1000);
+        }
+
+        if (aimbot) {
+            cheat.Aimbot();
         }
 
         if (fly_hack) {
