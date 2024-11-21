@@ -1,4 +1,7 @@
-// Cheat for Borderlands3 by h4wk0x01
+/*
+* Cheat for Borderlands3 by h4wk0x01
+*/
+
 #include <iostream>
 #include <Windows.h>
 #include <TlHelp32.h>
@@ -20,12 +23,12 @@ struct FRotator {
     float Yaw, Pitch, Roll;
 };
 
-Cheat::FVector::FVector() : x(0), y(0), z(0) {}
-Cheat::FVector::FVector(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+Cheat::Vec3D::Vec3D() : x(0), y(0), z(0) {}
+Cheat::Vec3D::Vec3D(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
 
-Cheat::FVector RotationToVector(FRotator R)
+Cheat::Vec3D RotationToVector(FRotator R)
 {
-    Cheat::FVector Vec;
+    Cheat::Vec3D Vec;
     float fYaw = R.Yaw * UCONST_Pi / 180.0f;
     float fPitch = R.Pitch * UCONST_Pi / 180.0f;
     float CosPitch = cos(fPitch);
@@ -36,19 +39,14 @@ Cheat::FVector RotationToVector(FRotator R)
     return Vec;
 }
 
-float vecModule(Cheat::FVector M)
-{
-    return sqrt(M.x * M.x + M.y * M.y + M.z * M.z);
-}
-
-float Size(Cheat::FVector& v)
+float vecModule(Cheat::Vec3D& v)
 {
     return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
-void Normalize(Cheat::FVector& v)
+void Normalize(Cheat::Vec3D& v)
 {
-    float size = Size(v);
+    float size = vecModule(v);
 
     if (!size)
         v.x = v.y = v.z = 1;
@@ -60,7 +58,7 @@ void Normalize(Cheat::FVector& v)
     }
 }
 
-void GetAxes(FRotator R, Cheat::FVector& X, Cheat::FVector& Y, Cheat::FVector& Z)
+void GetAxes(FRotator R, Cheat::Vec3D& X, Cheat::Vec3D& Y, Cheat::Vec3D& Z)
 {
     X = RotationToVector(R); // up
     Normalize(X);
@@ -76,9 +74,9 @@ void GetAxes(FRotator R, Cheat::FVector& X, Cheat::FVector& Y, Cheat::FVector& Z
     Normalize(Z);
 }
 
-Cheat::FVector VectorSubtract(Cheat::FVector va, Cheat::FVector vb)
+Cheat::Vec3D VectorSubtract(Cheat::Vec3D va, Cheat::Vec3D vb)
 {
-    Cheat::FVector out;
+    Cheat::Vec3D out;
 
     out.x = va.x - vb.x;
     out.y = va.y - vb.y;
@@ -87,33 +85,25 @@ Cheat::FVector VectorSubtract(Cheat::FVector va, Cheat::FVector vb)
     return out;
 }
 
-float inline Dot(const Cheat::FVector& V1, const Cheat::FVector& V2)
+float inline Dot(const Cheat::Vec3D& V1, const Cheat::Vec3D& V2)
 {
     return (V1.x * V2.x + V1.y * V2.y + V1.z * V2.z);
 }
 
-struct FMinimalViewInfo {
-    FRotator Rotation;
-    Cheat::FVector Location;
-    float FOV;
-
-    FMinimalViewInfo(FRotator R, Cheat::FVector L, float F) : Rotation(R), Location(L), FOV(F) {};
-};
-
 // Working W2S !!
-Cheat::FVector W2S(Cheat::FVector Location, FMinimalViewInfo cam_cache)
+Cheat::Vec3D WorldToScreen(Cheat::Vec3D EnemyLocation, FRotator RotationMatrix, Cheat::Vec3D PlayerLocation, float FOV)
 {
-    Cheat::FVector Return;
+    Cheat::Vec3D Return;
 
-    Cheat::FVector AxisX, AxisY, AxisZ, Delta, Transformed;
-    GetAxes(cam_cache.Rotation, AxisX, AxisY, AxisZ);
+    Cheat::Vec3D AxisX, AxisY, AxisZ, Delta, Transformed;
+    GetAxes(RotationMatrix, AxisX, AxisY, AxisZ);
 
     // In UE: Z(up), X(deep), Y(side)
-    Delta = VectorSubtract(Location, cam_cache.Location);
+    Delta = VectorSubtract(PlayerLocation, EnemyLocation);
     Transformed.x = Dot(Delta, AxisY);
     Transformed.y = Dot(Delta, AxisZ);
     Transformed.z = Dot(Delta, AxisX);
-    std::cout << "Transformed.z: " << Transformed.z << "°" << std::endl;
+    //std::cout << "Transformed.z: " << Transformed.z << "°" << std::endl;
 
     if (Transformed.z < 1.00f)
         Transformed.z = 1.00f;
@@ -121,8 +111,8 @@ Cheat::FVector W2S(Cheat::FVector Location, FMinimalViewInfo cam_cache)
     float ScreenCenterX = 1980.0f / 2.0f;
     float ScreenCenterY = 1080.0f / 2.0f;
         
-    Return.x = ScreenCenterX + Transformed.x * (ScreenCenterX / tan(cam_cache.FOV * UCONST_Pi / 360.0f)) / (Transformed.z);
-    Return.y = ScreenCenterY + -Transformed.y * (ScreenCenterX / tan(cam_cache.FOV * UCONST_Pi / 360.0f)) / (Transformed.z);
+    Return.x = ScreenCenterX + Transformed.x * (ScreenCenterX / tan(FOV * UCONST_Pi / 360.0f)) / (Transformed.z);
+    Return.y = ScreenCenterY + -Transformed.y * (ScreenCenterX / tan(FOV * UCONST_Pi / 360.0f)) / (Transformed.z);
     Return.z = Transformed.z;
 
     return Return;
@@ -171,8 +161,11 @@ Cheat::Vec2D Cheat::AimbotCalcAngles(float playerX, float playerY, float playerZ
 
 void Cheat::Aimbot() {
 
-    FVector playerCoords;
-    FVector enemyCoords;
+    Vec3D playerCoords;
+    Vec3D enemyCoords;
+
+    // Pre-fetch common vars
+    uintptr_t entityListPtrBase = moduleBase + dwEntityList;
 
     // Get local player coords
     playerCoords.x = RPM<float>(sPlayerX);
@@ -185,24 +178,20 @@ void Cheat::Aimbot() {
         unsigned int currentEntity = 0x10 * i;
 
         // Get Enemy Coords(X,Y,Z)
-        uintptr_t enemyXptr = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0x168, 0x220 });
-        uintptr_t enemyYptr = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0x168, 0x224 });
-        uintptr_t enemyZptr = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0x168, 0x228 });
-        float enemyTmpX = RPM<float>(enemyXptr);
-        float enemyTmpY = RPM<float>(enemyYptr);
-        float enemyTmpZ = RPM<float>(enemyZptr);
+        float enemyTmpX = RPM<float>(FindDMAAddy(hProcess, entityListPtrBase, { 0x68, 0xB88, currentEntity, 0x168, 0x220 }));
+        float enemyTmpY = RPM<float>(FindDMAAddy(hProcess, entityListPtrBase, { 0x68, 0xB88, currentEntity, 0x168, 0x224 }));
+        float enemyTmpZ = RPM<float>(FindDMAAddy(hProcess, entityListPtrBase, { 0x68, 0xB88, currentEntity, 0x168, 0x228 }));
 
-        FVector delta = VectorSubtract(playerCoords, FVector(enemyTmpX, enemyTmpY, enemyTmpZ));
+        Vec3D delta = VectorSubtract(playerCoords, Vec3D(enemyTmpX, enemyTmpY, enemyTmpZ));
         float distance = vecModule(delta);
 
         // Get Enemy health
-        uintptr_t enemyHealthPtr = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0xE70, 0x180, 0xA0 });
-        float enemyHealth = RPM<float>(enemyHealthPtr);
+        float enemyHealth = RPM<float>(FindDMAAddy(hProcess, entityListPtrBase, { 0x68, 0xB88, currentEntity, 0xE70, 0x180, 0xA0 }));
 
-        std::cout << "\n\nEnemy X: " << enemyTmpX << ", y: " << enemyTmpY << ", Z: " << enemyTmpZ << std::endl;
+        /*std::cout << "\n\nEnemy X: " << enemyTmpX << ", y: " << enemyTmpY << ", Z: " << enemyTmpZ << std::endl;
         std::cout << "Player X: " << playerCoords.x << ", y: " << playerCoords.y << ", Z: " << playerCoords.z << std::endl;
         std::cout << "Closest enemy distance: " << closestEnemyDistance << std::endl;
-        std::cout << "Distance: " << distance << std::endl;
+        std::cout << "Distance: " << distance << std::endl;*/
         if (distance < closestEnemyDistance && ((int)enemyHealth > 0 && (int)enemyHealth < 999)) { // If cloest Entity, and alive
             enemyCoords.x = enemyTmpX;
             enemyCoords.y = enemyTmpY;
@@ -212,50 +201,53 @@ void Cheat::Aimbot() {
     }
 
     Vec2D angles = AimbotCalcAngles(playerCoords.x, playerCoords.y, playerCoords.z, enemyCoords.x, enemyCoords.y, enemyCoords.z);
-
-    WPM<float>(0x1C098EF121C, angles.x); // Pitch
-    WPM<float>(0x1C098EF1220, angles.y); // Yaw
+    uintptr_t PitchPtr = FindDMAAddy(hProcess, moduleBase + dwAngles, PitchOffsets);
+    uintptr_t YawPtr = FindDMAAddy(hProcess, moduleBase + dwAngles, YawOffsets);
+    WPM<float>(PitchPtr, angles.x); // Pitch
+    WPM<float>(YawPtr, angles.y); // Yaw
 }
 
 Cheat::Entity* Cheat::ESP() {
 
-    //uintptr_t dwEntityList = RPM<DWORD>(moduleBase + 0x0686CAA0);
-    Entity* screenPos = new Entity{ 0.0f, 0.0f, 0.0f, 0.0f, nullptr };
-    Entity* head = screenPos;
+    // Entity List
+    Entity* CurrentEntity = new Entity{ 0.0f, 0.0f, 0.0f, 0.0f, nullptr };
+    Entity* FirstEntity = CurrentEntity;
+
+    // Pre-fetch common vars
+    uintptr_t entityListPtrBase = moduleBase + dwEntityList;
+
+    // Pre-fetch common pointers
+    uintptr_t PitchPtr = FindDMAAddy(hProcess, moduleBase + dwAngles, PitchOffsets);
+    uintptr_t YawPtr = FindDMAAddy(hProcess, moduleBase + dwAngles, YawOffsets);
+    uintptr_t FovPtr = FindDMAAddy(hProcess, moduleBase + dwFov, FovOffsets);
+
     for (int i = 1; i < 30; i++) { // Change for ammount of enemies
         unsigned int currentEntity = 0x10 * i;
 
-        uintptr_t PitchPtr = FindDMAAddy(hProcess, moduleBase + dwAngles, PitchOffsets);
-        float pitch = RPM<float>(0x1C098EF121C);
-
-        uintptr_t YawPtr = FindDMAAddy(hProcess, moduleBase + dwAngles, YawOffsets);
-        float yaw = RPM<float>(0x1C098EF1220);
-
-        uintptr_t FovPtr = FindDMAAddy(hProcess, moduleBase + dwFov, FovOffsets);
+        float pitch = RPM<float>(PitchPtr);
+        float yaw = RPM<float>(YawPtr);
         float fov = RPM<float>(FovPtr);
 
-        float LocalPlayerX = RPM<float>(sPlayerX);
-        float LocalPlayerY = RPM<float>(sPlayerY);
-        float LocalPlayerZ = RPM<float>(sPlayerZ);
+        Vec3D PlayerLocation;
+        PlayerLocation.x = RPM<float>(sPlayerX);
+        PlayerLocation.y = RPM<float>(sPlayerY);
+        PlayerLocation.z = RPM<float>(sPlayerZ);
 
         // (Enemy Location)
-        FVector EnemyLocation;
-        uintptr_t enemyX = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0x168, 0x220 });
-        uintptr_t enemyY = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0x168, 0x224 });
-        uintptr_t enemyZ = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0x168, 0x228 });
-        EnemyLocation.x = RPM<float>(enemyX);
-        EnemyLocation.y = RPM<float>(enemyY);
-        EnemyLocation.z = RPM<float>(enemyZ);
+        Vec3D EnemyLocation;
+        EnemyLocation.x = RPM<float>(FindDMAAddy(hProcess, entityListPtrBase, { 0x68, 0xB88, currentEntity, 0x168, 0x220 }));
+        EnemyLocation.y = RPM<float>(FindDMAAddy(hProcess, entityListPtrBase, { 0x68, 0xB88, currentEntity, 0x168, 0x224 }));
+        EnemyLocation.z = RPM<float>(FindDMAAddy(hProcess, entityListPtrBase, { 0x68, 0xB88, currentEntity, 0x168, 0x228 }));
 
-        std::cout << "Pitch: " << pitch << "°" << std::endl;
+        /*std::cout << "Pitch: " << pitch << "°" << std::endl;
         std::cout << "Yaw:   " << yaw << "°" << std::endl;
         std::cout << "FOV:   " << fov << "°" << std::endl;
-        std::cout << "Local Player X: " << LocalPlayerX << std::endl;
-        std::cout << "Local Player Y:   " << LocalPlayerY << std::endl;
-        std::cout << "Local Player Z:   " << LocalPlayerZ << std::endl;
+        std::cout << "Local Player X: " << PlayerLocation.x << std::endl;
+        std::cout << "Local Player Y:   " << PlayerLocation.y << std::endl;
+        std::cout << "Local Player Z:   " << PlayerLocation.z << std::endl;
         std::cout << "Enemy Player X: " << EnemyLocation.x << std::endl;
         std::cout << "Enemy Player Y:   " << EnemyLocation.y << std::endl;
-        std::cout << "Enemy Player Z:   " << EnemyLocation.z << std::endl;
+        std::cout << "Enemy Player Z:   " << EnemyLocation.z << std::endl;*/
 
         // (Pitch, Yaw, Roll)
         FRotator Rotation;
@@ -263,50 +255,158 @@ Cheat::Entity* Cheat::ESP() {
         Rotation.Yaw = yaw;
         Rotation.Roll = 0.0f;
 
-        FMinimalViewInfo cam_cache(Rotation, EnemyLocation, fov);
-
-        cam_cache.Location.x = LocalPlayerX;
-        cam_cache.Location.y = LocalPlayerY;
-        cam_cache.Location.z = LocalPlayerZ;
-
-        /*FVector delta = VectorSubtract(cam_cache.Location, EnemyLocation);
-        float vModule = vecModule(delta);*/
-
-        Cheat::FVector aux = W2S(EnemyLocation, cam_cache);
-        screenPos->next = new Entity{ aux.x, aux.y, aux.z, 0,nullptr };
-        screenPos->x = aux.x;
-        screenPos->y = aux.y;
-        screenPos->z = aux.z;
+        Cheat::Vec3D aux = WorldToScreen(PlayerLocation, Rotation, EnemyLocation, fov); // W2S(Cheat::Vec3D Location, Cheat::Vec3D RotationMatrix, Cheat::Vec3D EnemyLocation, float FOV)
+        CurrentEntity->next = new Entity{ aux.x, aux.y, aux.z, 0, nullptr };
+        CurrentEntity->x = aux.x;
+        CurrentEntity->y = aux.y;
+        CurrentEntity->z = aux.z;
 
         // Get Enemy health
-        uintptr_t enemyHealthPtr = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0xE70, 0x180, 0xA0 });
-        float enemyHealth = RPM<float>(enemyHealthPtr);
+        float enemyHealth = RPM<float>(FindDMAAddy(hProcess, entityListPtrBase, { 0x68, 0xB88, currentEntity, 0xE70, 0x180, 0xA0 }));
+
         if (!(enemyHealth > 0.0f && enemyHealth < 9999999)) { enemyHealth = 0; }
-        screenPos->health = enemyHealth;
+        CurrentEntity->health = enemyHealth;
 
-        std::cout << "Enemy -> Screen Coordinates: (X:" << screenPos->x << ", Y: " << screenPos->y << ")" << std::endl;
+        //std::cout << "Enemy -> Screen Coordinates: (X:" << CurrentEntity->x << ", Y: " << CurrentEntity->y << ")" << std::endl;
 
-        /*std::cout << "3D Coordinates: (X: " << worldPos.x
-            << ", Y: " << worldPos.y
-            << ", Z: " << worldPos.z << ")" << std::endl;*/
-        screenPos = screenPos->next;
+        CurrentEntity = CurrentEntity->next;
     }
-    return head;
-    //}
+    return FirstEntity;
 }
+
+//Cheat::Entity* Cheat::loopEntityList() {
+//
+//    Vec3D playerCoords;
+//    Vec3D enemyCoords;
+//
+//    // ESP variables
+//    Entity* screenPos = new Entity{ 0.0f, 0.0f, 0.0f, 0.0f, nullptr };
+//    Entity* head = screenPos;
+//
+//    float closestEnemyDistance = 999999;
+//    // Get closest enemy
+//    for (int i = 1; i < 3; i++) { // Change for ammount of enemies
+//        unsigned int currentEntity = 0x10 * i;
+//
+//        // Get local player coords
+//        playerCoords.x = RPM<float>(sPlayerX);
+//        playerCoords.y = RPM<float>(sPlayerY);
+//        playerCoords.z = RPM<float>(sPlayerZ);
+//
+//        // Get Enemy Coords(X,Y,Z)
+//        uintptr_t enemyXptr = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0x168, 0x220 });
+//        uintptr_t enemyYptr = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0x168, 0x224 });
+//        uintptr_t enemyZptr = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0x168, 0x228 });
+//        float enemyTmpX = RPM<float>(enemyXptr);
+//        float enemyTmpY = RPM<float>(enemyYptr);
+//        float enemyTmpZ = RPM<float>(enemyZptr);
+//
+//        // Get Enemy health
+//        uintptr_t enemyHealthPtr = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0xE70, 0x180, 0xA0 });
+//        float enemyHealth = RPM<float>(enemyHealthPtr);
+//
+//        
+//        if (esp) { // If ESP enabled
+//
+//            uintptr_t PitchPtr = FindDMAAddy(hProcess, moduleBase + dwAngles, PitchOffsets);
+//            uintptr_t YawPtr = FindDMAAddy(hProcess, moduleBase + dwAngles, YawOffsets);
+//            float pitch = RPM<float>(PitchPtr);
+//            float yaw = RPM<float>(YawPtr);
+//
+//            uintptr_t FovPtr = FindDMAAddy(hProcess, moduleBase + dwFov, FovOffsets);
+//            float fov = RPM<float>(FovPtr);
+//
+//
+//            // (Enemy Location)
+//            Vec3D EnemyLocation;
+//            uintptr_t enemyX = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0x168, 0x220 });
+//            uintptr_t enemyY = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0x168, 0x224 });
+//            uintptr_t enemyZ = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0x168, 0x228 });
+//            EnemyLocation.x = RPM<float>(enemyX);
+//            EnemyLocation.y = RPM<float>(enemyY);
+//            EnemyLocation.z = RPM<float>(enemyZ);
+//
+//            std::cout << "Pitch: " << pitch << "°" << std::endl;
+//            std::cout << "Yaw:   " << yaw << "°" << std::endl;
+//            std::cout << "FOV:   " << fov << "°" << std::endl;
+//            std::cout << "Local Player X: " << playerCoords.x << std::endl;
+//            std::cout << "Local Player Y:   " << playerCoords.y << std::endl;
+//            std::cout << "Local Player Z:   " << playerCoords.z << std::endl;
+//            std::cout << "Enemy Player X: " << EnemyLocation.x << std::endl;
+//            std::cout << "Enemy Player Y:   " << EnemyLocation.y << std::endl;
+//            std::cout << "Enemy Player Z:   " << EnemyLocation.z << std::endl;
+//
+//            // (Pitch, Yaw, Roll)
+//            FRotator Rotation;
+//            Rotation.Pitch = pitch;
+//            Rotation.Yaw = yaw;
+//            Rotation.Roll = 0.0f;
+//
+//            FMinimalViewInfo cam_cache(Rotation, EnemyLocation, fov);
+//
+//            cam_cache.Location.x = playerCoords.x;
+//            cam_cache.Location.y = playerCoords.y;
+//            cam_cache.Location.z = playerCoords.z; // Get distance for ESP distance adjustments
+//
+//            Cheat::Vec3D aux = W2S(EnemyLocation, cam_cache);
+//            screenPos->next = new Entity{ aux.x, aux.y, aux.z, 0,nullptr };
+//            screenPos->x = aux.x;
+//            screenPos->y = aux.y;
+//            screenPos->z = aux.z;
+//
+//            // Get Enemy health
+//            uintptr_t enemyHealthPtr = FindDMAAddy(hProcess, moduleBase + dwEntityList, { 0x68, 0xB88, currentEntity, 0xE70, 0x180, 0xA0 });
+//            float enemyHealth = RPM<float>(enemyHealthPtr);
+//            if (!(enemyHealth > 0.0f && enemyHealth < 9999999)) { enemyHealth = 0; }
+//            screenPos->health = enemyHealth;
+//
+//            std::cout << "Enemy -> Screen Coordinates: (X:" << screenPos->x << ", Y: " << screenPos->y << ")" << std::endl;
+//
+//            /*std::cout << "3D Coordinates: (X: " << worldPos.x
+//                << ", Y: " << worldPos.y
+//                << ", Z: " << worldPos.z << ")" << std::endl;*/
+//            screenPos = screenPos->next;
+//        }
+//
+//        if (aimbot) { // If Aimbot enabled
+//            Vec3D delta = VectorSubtract(playerCoords, Vec3D(enemyTmpX, enemyTmpY, enemyTmpZ));
+//            float distance = vecModule(delta);
+//            std::cout << "\n\nEnemy X: " << enemyTmpX << ", y: " << enemyTmpY << ", Z: " << enemyTmpZ << std::endl;
+//            std::cout << "Player X: " << playerCoords.x << ", y: " << playerCoords.y << ", Z: " << playerCoords.z << std::endl;
+//            std::cout << "Closest enemy distance: " << closestEnemyDistance << std::endl;
+//            std::cout << "Distance: " << distance << std::endl;
+//            if (distance < closestEnemyDistance && ((int)enemyHealth > 0 && (int)enemyHealth < 999)) { // If cloest Entity, and alive
+//                enemyCoords.x = enemyTmpX;
+//                enemyCoords.y = enemyTmpY;
+//                enemyCoords.z = enemyTmpZ;
+//                closestEnemyDistance = distance;
+//            }
+//        }
+//    }
+//
+//    if (aimbot) {
+//        Vec2D angles = AimbotCalcAngles(playerCoords.x, playerCoords.y, playerCoords.z, enemyCoords.x, enemyCoords.y, enemyCoords.z);
+//        uintptr_t PitchPtr = FindDMAAddy(hProcess, moduleBase + dwAngles, PitchOffsets);
+//        uintptr_t YawPtr = FindDMAAddy(hProcess, moduleBase + dwAngles, YawOffsets);
+//        WPM<float>(PitchPtr, angles.x); // Pitch
+//        WPM<float>(YawPtr, angles.y); // Yaw
+//    }
+//
+//    return head;
+//}
 
 void Cheat::flyHack() {
    // uintptr_t playerX = FindDMAAddy(hProcess, moduleBase + 0x0686CAA0, { 0x68, 0xB88, 0x0, 0x168, 0x224 });
-    uintptr_t playerZ = FindDMAAddy(hProcess, moduleBase + 0x0686CAA0, PlayerZOffsets);
+    //uintptr_t playerZ = FindDMAAddy(hProcess, moduleBase + 0x0686CAA0, PlayerZOffsets);
 
     //float currentX = 0;
     float currentZ = 0;
 
-    currentZ = RPM<float>(playerZ);
+    currentZ = RPM<float>(sPlayerZ);
    // currentX = RPM<float>(playerX);
     if (GetAsyncKeyState(VK_SPACE) & 0x8000) { // GO UP
         currentZ = currentZ + 300.0;
-        WPM<float>(playerZ, currentZ);
+        WPM<float>(sPlayerZ, currentZ);
     }
     //if (GetAsyncKeyState(0x57) & 0x8000) { // MOVE FORWARD
     //    currentX = currentX + 300.0;
@@ -314,7 +414,7 @@ void Cheat::flyHack() {
     // }
     if (GetAsyncKeyState(VK_SHIFT) & 0x8000) { // GO DOWN
         currentZ = currentZ - 50.0;
-        WPM<float>(playerZ, currentZ);
+        WPM<float>(sPlayerZ, currentZ);
     }
 }
 

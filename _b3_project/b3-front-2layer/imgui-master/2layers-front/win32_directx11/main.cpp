@@ -89,16 +89,6 @@ int main(int, char**)
     Cheat cheat(cHandler.moduleBase, cHandler.hProcess);
     std::cout << "ModuleBase: " << cHandler.moduleBase << std::endl;
 
-    bool mod_menu = true;
-    bool infinite_ammo = false;
-    bool no_reload = false;
-    bool aimbot = false;
-    bool fly_hack = false;
-    bool god_mode = false;
-    bool unlimited_armor = false;
-    bool esp = false;
-    float esp_color[4] = { 255.0, 0.0, 0.0, 255.0 };
-
     // Main loop
     bool done = false;
     while (!done)
@@ -137,7 +127,7 @@ int main(int, char**)
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();  // You still need to call NewFrame() for ImGui state, but no window will be created
 
-        if (mod_menu) {
+        if (cheat.cfg_mod_menu) {
             //ImGui::ShowDemoWindow();
             ImVec2 initial_size(600, 400);  // Set your desired initial width and height
             ImGui::SetNextWindowSize(initial_size, ImGuiCond_FirstUseEver);  // Conditionally set it only on first use
@@ -175,20 +165,20 @@ int main(int, char**)
             {
                 if (ImGui::BeginTabItem("Local Player"))
                 {
-                    ImGui::Checkbox("Infinite Ammo", &infinite_ammo);
-                    ImGui::Checkbox("No Reload", &no_reload);
-                    ImGui::Checkbox("Fly Hack", &fly_hack);
+                    ImGui::Checkbox("Infinite Ammo", &cheat.cfg_infinite_ammo);
+                    ImGui::Checkbox("No Reload", &cheat.cfg_no_reload);
+                    ImGui::Checkbox("Fly Hack", &cheat.cfg_fly_hack);
                     ImGui::SameLine(); HelpMarker("SPACE key: Go Up, SHIFT key: Go Down");
-                    ImGui::Checkbox("Unlimited Armor", &unlimited_armor);
-                    ImGui::Checkbox("God Mode", &god_mode);
+                    ImGui::Checkbox("Unlimited Armor", &cheat.cfg_unlimited_armor);
+                    ImGui::Checkbox("God Mode", &cheat.cfg_god_mode);
                     ImGui::EndTabItem();
                 }
                 if (ImGui::BeginTabItem("Enemies"))
                 {
                     ImGui::SeparatorText("Extra Sensory Perseption");
-                    ImGui::Checkbox("ESP", &esp);
+                    ImGui::Checkbox("ESP", &cheat.cfg_esp);
                     
-                    ImGui::ColorEdit4("Rec Color", esp_color);
+                    ImGui::ColorEdit4("Rec Color", cheat.cfg_esp_color);
                     ImGui::SameLine(); HelpMarker(
                         "Click on the color square to open a color picker.\n"
                         "Click and hold to use drag and drop.\n"
@@ -198,7 +188,7 @@ int main(int, char**)
                 }
                 if (ImGui::BeginTabItem("Aimbot"))
                 {
-                    ImGui::Checkbox("Aimbot", &aimbot);
+                    ImGui::Checkbox("Aimbot", &cheat.cfg_aimbot);
                     ImGui::EndTabItem();
                 }
                 if (ImGui::BeginTabItem("Misc"))
@@ -216,7 +206,7 @@ int main(int, char**)
                     if (ImGui::Button("Reset")) {}
                     ImGui::SeparatorText("Menu Settings");
                     ImGui::Text("Hotkey: ");
-                    ImGui::Checkbox("INSERT", &esp);
+                    ImGui::Checkbox("INSERT", &cheat.cfg_esp);
                     ImGui::EndTabItem();
                 }
                 ImGui::EndTabBar();
@@ -227,7 +217,7 @@ int main(int, char**)
         }
 
         if (GetAsyncKeyState(VK_INSERT) & 0x01) {  // 0x8000 means the key is pressed
-            mod_menu = !mod_menu;
+            cheat.cfg_mod_menu = !cheat.cfg_mod_menu;
         }
         
 
@@ -235,8 +225,7 @@ int main(int, char**)
         ImDrawList* draw_list = ImGui::GetForegroundDrawList(); // Use foreground to avoid window creation
 
         /* ---> CHEAT FUNCTIONS STARTS HERE <--- */
-        // ESP
-        if (esp) {
+        if (cheat.cfg_esp) { // ESP or Aimbot = loop through Entity List
             Cheat::Entity* enemyCoords = cheat.ESP();
             while (enemyCoords != nullptr) {
                 float distance = enemyCoords->z;
@@ -244,17 +233,18 @@ int main(int, char**)
                 float height_at_distance_1_p1y = 40.0f;
                 float width_at_distance_1 = 35000.0f;
                 float height_at_distance_1 = 120000.0f;
-                /*if (distance <= 0)
-                    distance = 1;*/
                 float p1x = (width_at_distance_1_p1x) / distance;
                 float p1y = (height_at_distance_1_p1y) / distance;
                 float p2x = (width_at_distance_1) / distance;
                 float p2y = (height_at_distance_1) / distance;
-                std::cout << "p1x: " << p1x << ", p1y: " << p1y << std::endl;
+                /*std::cout << "p1x: " << p1x << ", p1y: " << p1y << std::endl;
                 std::cout << "p2x: " << p2x << ", p2y: " << p2y << std::endl;
-                std::cout << "distance: " << distance << std::endl;
-                ImVec2 p1(enemyCoords->x - p1x, enemyCoords->y);
-                ImVec2 p2(enemyCoords->x + p2x, enemyCoords->y + p2y);
+                std::cout << "distance: " << distance << std::endl;*/
+                ImVec2 p1_esp(enemyCoords->x - p1x, enemyCoords->y);
+                ImVec2 p2_esp(enemyCoords->x + p2x, enemyCoords->y + p2y);
+
+                ImVec2 p1_health(enemyCoords->x - p1x - 5, enemyCoords->y);
+                ImVec2 p2_health(enemyCoords->x - p1x - 3, enemyCoords->y + p2y);
 
                 // If alive, draw rectangle
                 int enemyHp = (int)enemyCoords->health;
@@ -262,28 +252,29 @@ int main(int, char**)
                 if (enemyHp > 0) {
                     if (enemyHp < 30) { healthColor = 0xFF0000FF; } // Red
                     else if (enemyHp < 60) { healthColor = 0xFF00A5FF; } // Orange
-                    draw_list->AddRect(p1, p2, IM_COL32(esp_color[0], esp_color[1], esp_color[2], esp_color[3]), 5.0f);  // Red outline, thickness 5
-                    draw_list->AddText(ImVec2((float)p1.x, (float)p1.y - 20), 0xFFFFFFFF, "Health: ");
-                    draw_list->AddText(ImVec2((float)p1.x + 55, (float)p1.y - 20), healthColor, std::to_string(enemyHp).c_str());
+                    draw_list->AddRect(p1_esp, p2_esp, IM_COL32(cheat.cfg_esp_color[0], cheat.cfg_esp_color[1], cheat.cfg_esp_color[2], cheat.cfg_esp_color[3]), 5.0f);  // Red outline, thickness 5
+                    draw_list->AddText(ImVec2((float)p1_esp.x, (float)p1_esp.y - 20), 0xFFFFFFFF, "Health: ");
+                    draw_list->AddText(ImVec2((float)p1_esp.x + 55, (float)p1_esp.y - 20), healthColor, std::to_string(enemyHp).c_str());
+                    draw_list->AddRectFilled(p1_health, p2_health, healthColor, 5.0f);
                 }
                 enemyCoords = enemyCoords->next;
             }
-           //Sleep(1000);
+             //Sleep(1000);
         }
 
-        if (aimbot) {
+        if (cheat.cfg_aimbot) {
             cheat.Aimbot();
         }
 
-        if (fly_hack) {
+        if (cheat.cfg_fly_hack) {
             cheat.flyHack();
         }
 
-        if (unlimited_armor) {
+        if (cheat.cfg_unlimited_armor) {
             cheat.unlimitedArmor();
         }
 
-        if (god_mode) {
+        if (cheat.cfg_god_mode) {
             cheat.godMode();
         }
         

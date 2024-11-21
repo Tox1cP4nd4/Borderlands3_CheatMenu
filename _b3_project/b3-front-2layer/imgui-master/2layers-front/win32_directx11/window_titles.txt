@@ -1,14 +1,17 @@
 List of Windows with Titles and PIDs
 --------------------------------------
 Window Title: Task Switching, PID: 6224
-Window Title: Dear ImGui DirectX11 Example, PID: 17076
-Window Title: PopupHost, PID: 6224
+Window Title: Dear ImGui DirectX11 Example, PID: 7532
 Window Title: Battery Meter, PID: 6224
+Window Title: PopupHost, PID: 6224
 Window Title: System tray overflow window., PID: 6224
 Window Title: CiceroUIWndFrame, PID: 6572
 Window Title: Menu, PID: 12792
 Window Title: CiceroUIWndFrame, PID: 11216
-Window Title: C:\Users\mythic-user\Desktop\learning_cheat_creation\g_borderlands3\_b3_project\b3-front-2layer\imgui-master\2layers-front\win32_directx11\Debug\bo3_2layers_front.exe, PID: 25224
-Window Title: Borderlands® 3  , PID: 20140
+Window Title: C:\Users\mythic-user\Desktop\learning_cheat_creation\g_borderlands3\_b3_project\b3-front-2layer\imgui-master\2layers-front\win32_directx11\Debug\bo3_2layers_front.exe, PID: 3424
+Window Title: DDE Server Window, PID: 3424
+Window Title: DesktopWindowXamlSource, PID: 3424
+Window Title: example_win32_directx11 (Running) - Microsoft Visual Studio, PID: 6572
+Window Title: Borderlands® 3  , PID: 8252
 Found Borderlands window!
-Window Title: Borderlands® 3  , PID: 20140
+Window Title: Borderlands® 3  , PID: 8252
