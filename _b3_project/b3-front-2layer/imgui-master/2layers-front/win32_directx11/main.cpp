@@ -15,6 +15,8 @@
 #include "cheat_main.h"
 #include "cheat_init.h"
 #include <string> // toString
+#include <unordered_map>
+#include <atlstr.h> // CW2A
 
 // Data
 static ID3D11Device*            g_pd3dDevice = nullptr;
@@ -43,9 +45,78 @@ static void HelpMarker(const char* desc)
     }
 }
 
+std::string getConfigFilePath() {
+    OPENFILENAME ofn;       // common dialog box structure
+    wchar_t szFile[260];    // buffer for file name (max path length)
+
+    // Initialize OPENFILENAME
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;  // No owner window, typically you'd set a parent window here
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile) / sizeof(wchar_t);  // Size in wide characters
+    ofn.lpstrFilter = L"Config File\0*.CFG\0All files\0*.*\0";  // File filter
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFile[0] = L'\0';  // Initialize file name to an empty string
+    ofn.lpstrInitialDir = NULL;  // No initial directory
+    ofn.lpstrTitle = L"Select a file";  // Dialog box title
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST; // Flags: File must exist -> OFN_FILEMUSTEXIST
+
+    // Display the file open dialog box
+    if (GetOpenFileName(&ofn) == TRUE) {
+        std::wcout << L"Selected file: " << ofn.lpstrFile << std::endl;
+
+        // Convert the wide-character file path (LPWSTR) to std::string
+        int bufferSize = WideCharToMultiByte(CP_UTF8, 0, ofn.lpstrFile, -1, NULL, 0, NULL, NULL);
+        std::string filePath(bufferSize, 0);  // Create a string with the required size
+        WideCharToMultiByte(CP_UTF8, 0, ofn.lpstrFile, -1, &filePath[0], bufferSize, NULL, NULL);
+
+        return filePath;  // Return the converted std::string
+    }
+    else {
+        std::wcout << L"No file selected or dialog was cancelled." << std::endl;
+        return "";  // Return an empty string in case of failure
+    }
+}
+
+std::string getNewConfigFilePath() {
+    OPENFILENAME ofn;       // common dialog box structure
+    wchar_t szFile[260];    // buffer for file name (max path length)
+
+    // Initialize OPENFILENAME
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;  // No owner window, typically you'd set a parent window here
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile) / sizeof(wchar_t);  // Size in wide characters
+    ofn.lpstrFilter = L"Config File\0*.CFG\0All files\0*.*\0";  // File filter
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFile[0] = L'\0';  // Initialize file name to an empty string
+    ofn.lpstrInitialDir = NULL;  // No initial directory
+    ofn.lpstrTitle = L"Save Configuration As";  // Dialog box title
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;  // Ensure path exists, prompt if file exists
+
+    // Display the file save dialog box
+    if (GetSaveFileName(&ofn) == TRUE) {
+        std::wcout << L"Selected file: " << ofn.lpstrFile << std::endl;
+
+        // Convert the wide-character file path (LPWSTR) to std::string
+        int bufferSize = WideCharToMultiByte(CP_UTF8, 0, ofn.lpstrFile, -1, NULL, 0, NULL, NULL);
+        std::string filePath(bufferSize, 0);  // Create a string with the required size
+        WideCharToMultiByte(CP_UTF8, 0, ofn.lpstrFile, -1, &filePath[0], bufferSize, NULL, NULL);
+
+        return filePath;  // Return the converted std::string
+    }
+    else {
+        std::wcout << L"No file selected or dialog was cancelled." << std::endl;
+        return "";  // Return an empty string in case of failure
+    }
+}
+    
 // Main code
 int main(int, char**)
 {
+
     // Define application window class
     WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
     ::RegisterClassExW(&wc);
@@ -129,35 +200,48 @@ int main(int, char**)
 
         if (cheat.cfg_mod_menu) {
             //ImGui::ShowDemoWindow();
-            ImVec2 initial_size(600, 400);  // Set your desired initial width and height
+            ImVec2 initial_size(400, 400);  // Set your desired initial width and height
             ImGui::SetNextWindowSize(initial_size, ImGuiCond_FirstUseEver);  // Conditionally set it only on first use
-            ImGui::Begin("Xit do cria", nullptr, ImGuiWindowFlags_NoCollapse);
+            ImGui::Begin("Tox1c P4nd4", nullptr, ImGuiWindowFlags_NoCollapse);
 
-            //for (int i = 0; i < ImGuiCol_COUNT; i++)
-            //{
-            //    const char* name = ImGui::GetStyleColorName(i);
-            //    if (!filter.PassFilter(name))
-            //        continue;
-            //    ImGui::PushID(i);
-            //    #ifndef IMGUI_DISABLE_DEBUG_TOOLS
-            //    if (ImGui::Button("?"))
-            //        ImGui::DebugFlashStyleColor((ImGuiCol)i);
-            //    ImGui::SetItemTooltip("Flash given color to identify places where it is used.");
-            //    ImGui::SameLine();
-            //    #endif
-            //    ImGui::ColorEdit4("##color", (float*)&style.Colors[i], ImGuiColorEditFlags_AlphaBar | alpha_flags);
-            //    if (memcmp(&style.Colors[i], &ref->Colors[i], sizeof(ImVec4)) != 0)
-            //    {
-            //        // Tips: in a real user application, you may want to merge and use an icon font into the main font,
-            //        // so instead of "Save"/"Revert" you'd use icons!
-            //        // Read the FAQ and docs/FONTS.md about using icon fonts. It's really easy and super convenient!
-            //        ImGui::SameLine(0.0f, style.ItemInnerSpacing.x); if (ImGui::Button("Save")) { ref->Colors[i] = style.Colors[i]; }
-            //        ImGui::SameLine(0.0f, style.ItemInnerSpacing.x); if (ImGui::Button("Revert")) { style.Colors[i] = ref->Colors[i]; }
-            //    }
-            //    ImGui::SameLine(0.0f, style.ItemInnerSpacing.x);
-            //    ImGui::TextUnformatted(name);
-            //    ImGui::PopID();
-            //}
+            /*# Converter RGB(0 - 255) to ImVec4(0.0 - 1.0)
+                def rgb_to_imvec4(r, g, b, a = 255) :
+                return (r / 255.0, g / 255.0, b / 255.0, a / 255.0)
+
+                # Example
+                rgb = (52, 235, 70)
+                imvec4_color = rgb_to_imvec4(*rgb)
+                print(imvec4_color)*/
+
+
+            // RGBA
+            ImVec4 greenColor = ImVec4(0.0f, 0.2f, 0.0f, 1.0f);
+            ImVec4 whiteColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+            ImVec4 blackColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+            ImVec4 lightGreenColor = ImVec4(0.20f, 0.92f, 0.27f, 1.0);
+
+            ImVec4 tabColor = ImVec4(0.09, 0.34, 0.01, 1.0);
+            ImVec4 tabActiveColor = ImVec4(0.03, 0.56, 0.13, 1.0);
+            ImVec4 frameBgHoveredColor = ImVec4(0.23, 0.98, 0.00, 1.0);
+            ImVec4 checkMarkColor = ImVec4(0.0, 1.0, 0.43, 1.0);
+            ImVec4 sliderGrabColor = ImVec4(0.36, 0.75, 0.0, 1.0);
+
+            ImGui::GetStyle().Colors[ImGuiCol_Text] = whiteColor;            // Text color
+            ImGui::GetStyle().Colors[ImGuiCol_Button] = greenColor;          // Button color
+            ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered] = ImVec4(0.0f, 0.8f, 0.0f, 1.0f); // Slightly darker green when hovered
+            ImGui::GetStyle().Colors[ImGuiCol_ButtonActive] = ImVec4(0.0f, 0.6f, 0.0f, 1.0f); // Even darker green when clicked
+            ImGui::GetStyle().Colors[ImGuiCol_Border] = greenColor;         // Border color
+            ImGui::GetStyle().Colors[ImGuiCol_SliderGrab] = greenColor;     // Slider grab color
+            ImGui::GetStyle().Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.0f, 0.8f, 0.0f, 1.0f); // Slider grab active color
+            ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive] = greenColor;
+            ImGui::GetStyle().Colors[ImGuiCol_Tab] = tabColor;
+            ImGui::GetStyle().Colors[ImGuiCol_TabActive] = tabActiveColor;
+            ImGui::GetStyle().Colors[ImGuiCol_TabHovered] = greenColor;
+            ImGui::GetStyle().Colors[ImGuiCol_FrameBg] = greenColor;
+            ImGui::GetStyle().Colors[ImGuiCol_TabHovered] = lightGreenColor;
+            ImGui::GetStyle().Colors[ImGuiCol_FrameBgHovered] = frameBgHoveredColor;
+            ImGui::GetStyle().Colors[ImGuiCol_CheckMark] = checkMarkColor;
+            ImGui::GetStyle().Colors[ImGuiCol_SliderGrab] = sliderGrabColor;
             
             //IMGUI_DEMO_MARKER("Widgets/Tabs/Basic");
             ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_NoCloseWithMiddleMouseButton;
@@ -165,15 +249,15 @@ int main(int, char**)
             {
                 if (ImGui::BeginTabItem("Local Player"))
                 {
-                    ImGui::Checkbox("Infinite Ammo", &cheat.cfg_infinite_ammo);
-                    ImGui::Checkbox("No Reload", &cheat.cfg_no_reload);
-                    ImGui::Checkbox("Fly Hack", &cheat.cfg_fly_hack);
-                    ImGui::SameLine(); HelpMarker("SPACE key: Go Up, SHIFT key: Go Down");
+                    ImGui::SeparatorText("Health/Armor");
                     ImGui::Checkbox("Unlimited Armor", &cheat.cfg_unlimited_armor);
                     ImGui::Checkbox("God Mode", &cheat.cfg_god_mode);
+                    ImGui::SeparatorText("Gun/Ammo");
+                    ImGui::Checkbox("Infinite Ammo", &cheat.cfg_infinite_ammo);
+                    ImGui::Checkbox("No Reload", &cheat.cfg_no_reload);
                     ImGui::EndTabItem();
                 }
-                if (ImGui::BeginTabItem("Enemies"))
+                if (ImGui::BeginTabItem("ESP"))
                 {
                     ImGui::SeparatorText("Extra Sensory Perseption");
                     ImGui::Checkbox("ESP", &cheat.cfg_esp);
@@ -188,22 +272,80 @@ int main(int, char**)
                 }
                 if (ImGui::BeginTabItem("Aimbot"))
                 {
+                    ImGui::SeparatorText("Aimbot");
                     ImGui::Checkbox("Aimbot", &cheat.cfg_aimbot);
+                    ImGui::SliderInt("Max Distance", &cheat.aimbot_max_distance, 0, 500);
+                    ImGui::SameLine(); HelpMarker("CTRL+click to input value.");
+                    ImGui::Text("Hotkey:"); ImGui::SameLine(); if (ImGui::Button("LALT")) {}
                     ImGui::EndTabItem();
                 }
                 if (ImGui::BeginTabItem("Misc"))
                 {
-                    ImGui::Text("Miscellaneous Configs");
+                    ImGui::SeparatorText("Miscellaneous Configs");
+                    ImGui::Checkbox("Fly Hack", &cheat.cfg_fly_hack);
+                    ImGui::SameLine(); HelpMarker("SPACE key: Go Up, SHIFT key: Go Down");
+                    ImGui::SeparatorText("Money");
+                    ImGui::SliderInt("##a", &cheat.cfg_add_money, 1, 10000000);
+                    ImGui::SameLine(); if (ImGui::Button("Add##m")) { cheat.addMoney(cheat.cfg_add_money); }
+                    ImGui::SeparatorText("Keys");
+                    ImGui::Text("Normal Key");
+                    ImGui::SliderInt("##b", &cheat.cfg_add_keys, 1, 10);
+                    ImGui::SameLine(); if (ImGui::Button("Add##nk")) {}
+                    ImGui::Text("Golden Key");
+                    ImGui::SliderInt("##c", &cheat.cfg_add_golden_keys, 1, 10);
+                    ImGui::SameLine(); if (ImGui::Button("Add##gk")) {}
+                    ImGui::SeparatorText("Skill Points");
+                    ImGui::SliderInt("##d", &cheat.cfg_add_skillPoints, 1, 30);
+                    ImGui::SameLine(); if (ImGui::Button("Add##sp")) { cheat.addSkillPoints(cheat.cfg_add_skillPoints); }
                     ImGui::EndTabItem();
                 }
                 if (ImGui::BeginTabItem("Settings"))
                 {
                     ImGui::SeparatorText("Config");
-                    if (ImGui::Button("Load")) {}
+                    if (ImGui::Button("Load")) {
+                       std::string cfgPath = getConfigFilePath();
+                       std::unordered_map<std::string, std::string> config;
+
+                       // Read configuration from file
+                       cheat.readConfigFile(cfgPath, config);
+
+                       //// Print out the values
+                       for (const auto& pair : config) {
+                           std::cout << pair.first << " = " << pair.second << std::endl;
+                       }
+
+                       // BOOL
+                       cheat.cfg_infinite_ammo = (config["cfg_infinite_ammo"] == "true");
+                       cheat.cfg_no_reload = (config["cfg_no_reload"] == "true");
+                       cheat.cfg_aimbot = (config["cfg_aimbot"] == "true");
+                       cheat.cfg_fly_hack = (config["cfg_fly_hack"] == "true");
+                       cheat.cfg_god_mode = (config["cfg_god_mode"] == "true");
+                       cheat.cfg_unlimited_armor = (config["cfg_unlimited_armor"] == "true");
+                       cheat.cfg_esp = (config["cfg_esp"] == "true");
+
+                       // INT
+                       cheat.cfg_add_money = (std::stoi(config["cfg_add_money"]));
+                       cheat.cfg_add_golden_keys = (std::stoi(config["cfg_add_golden_keys"]));
+                       cheat.cfg_add_keys = (std::stoi(config["cfg_add_keys"]));
+                       cheat.cfg_add_skillPoints = (std::stoi(config["cfg_add_skillPoints"]));
+                       cheat.aimbot_max_distance = (std::stoi(config["aimbot_max_distance"]));
+
+                       //// FLOAT
+                       cheat.cfg_esp_color[0] = (std::stof(config["cfg_esp_color_R"]));
+                       cheat.cfg_esp_color[1] = (std::stof(config["cfg_esp_color_G"]));
+                       cheat.cfg_esp_color[2] = (std::stof(config["cfg_esp_color_B"]));
+                       cheat.cfg_esp_color[3] = (std::stof(config["cfg_esp_color_A"]));
+
+                    }
                     ImGui::SameLine();
-                    if (ImGui::Button("Save")) {}
+                    if (ImGui::Button("Save")) {
+                        std::string cfgPath = getNewConfigFilePath();
+                        cheat.writeConfigFile(cfgPath);
+                    }
                     ImGui::SameLine();
-                    if (ImGui::Button("Reset")) {}
+                    if (ImGui::Button("Reset")) {
+                        cheat.resetConfig();
+                    }
                     ImGui::SeparatorText("Menu Settings");
                     ImGui::Text("Hotkey: ");
                     ImGui::Checkbox("INSERT", &cheat.cfg_esp);
@@ -226,43 +368,74 @@ int main(int, char**)
 
         /* ---> CHEAT FUNCTIONS STARTS HERE <--- */
         if (cheat.cfg_esp) { // ESP or Aimbot = loop through Entity List
-            Cheat::Entity* enemyCoords = cheat.ESP();
-            while (enemyCoords != nullptr) {
-                float distance = enemyCoords->z;
-                float width_at_distance_1_p1x = 60000.0f;
-                float height_at_distance_1_p1y = 40.0f;
-                float width_at_distance_1 = 35000.0f;
-                float height_at_distance_1 = 120000.0f;
-                float p1x = (width_at_distance_1_p1x) / distance;
-                float p1y = (height_at_distance_1_p1y) / distance;
-                float p2x = (width_at_distance_1) / distance;
-                float p2y = (height_at_distance_1) / distance;
+            Cheat::Entity* entityArr = cheat.ESP();
+            while (entityArr != nullptr) {
+                float distance = entityArr->z/91; // Adjusting distance so that when we`re very close its set to 1
+
+                // Manually adjusting ESP at different distances:
+                float p1x = 600.0f / distance;
+                float p1y = 10.0f / distance;
+                float p2x = 350.0f / distance;
+                float p2y = 1600.0f / distance;
                 /*std::cout << "p1x: " << p1x << ", p1y: " << p1y << std::endl;
                 std::cout << "p2x: " << p2x << ", p2y: " << p2y << std::endl;
                 std::cout << "distance: " << distance << std::endl;*/
-                ImVec2 p1_esp(enemyCoords->x - p1x, enemyCoords->y);
-                ImVec2 p2_esp(enemyCoords->x + p2x, enemyCoords->y + p2y);
+                ImVec2 p1_esp(entityArr->x - p1x, entityArr->y);
+                ImVec2 p2_esp(entityArr->x + p2x, entityArr->y + p2y);
 
-                ImVec2 p1_health(enemyCoords->x - p1x - 5, enemyCoords->y);
-                ImVec2 p2_health(enemyCoords->x - p1x - 3, enemyCoords->y + p2y);
+                // 3D ESP
+                float Const_x = 85;
+                float Const_y = 40;
+                float CYb = 2;
+                ImVec2 p3_esp(p2_esp.x + Const_x, p2_esp.y - Const_y);
+                ImVec2 p4_esp(p2_esp.x - Const_x, p3_esp.y - CYb);
+                ImVec2 p5_esp(p4_esp.x - Const_x, p4_esp.y + (Const_y + CYb));
+                ImVec2 p6_esp(p3_esp.x, p3_esp.y - (p2_esp.y - p1_esp.y));
+                ImVec2 p7_esp(p4_esp.x, p6_esp.y - CYb);
+                ImVec2 p8_esp(p2_esp.x, p1_esp.y + CYb);
+
+                int enemyHp = (int)entityArr->health;
+
+                float hpBarIncreaseVar = 16.0f / distance;
+                ImVec2 p1_health(entityArr->x - p1x - 7, entityArr->y + p2y - (enemyHp * hpBarIncreaseVar)); // Quanto maior o HP, maior a barra de vida do ESP
+                ImVec2 p2_health(entityArr->x - p1x - 3, entityArr->y + p2y);
 
                 // If alive, draw rectangle
-                int enemyHp = (int)enemyCoords->health;
                 ImU32 healthColor = 0xFF00FF00; // Green
                 if (enemyHp > 0) {
                     if (enemyHp < 30) { healthColor = 0xFF0000FF; } // Red
                     else if (enemyHp < 60) { healthColor = 0xFF00A5FF; } // Orange
-                    draw_list->AddRect(p1_esp, p2_esp, IM_COL32(cheat.cfg_esp_color[0], cheat.cfg_esp_color[1], cheat.cfg_esp_color[2], cheat.cfg_esp_color[3]), 5.0f);  // Red outline, thickness 5
+
+                    float esp_thickness = 2.0f;
+
+                    // ESP BOX
+                    draw_list->AddRect(p1_esp, p2_esp, IM_COL32(cheat.cfg_esp_color[0], cheat.cfg_esp_color[1], cheat.cfg_esp_color[2], cheat.cfg_esp_color[3]), esp_thickness);  // Red outline, thickness 5
+
+                    // 3D ESP
+                    /*draw_list->AddLine(p2_esp, p3_esp, IM_COL32(cheat.cfg_esp_color[0], cheat.cfg_esp_color[1], cheat.cfg_esp_color[2], cheat.cfg_esp_color[3]), esp_thickness);
+                    draw_list->AddLine(p3_esp, p4_esp, IM_COL32(cheat.cfg_esp_color[0], cheat.cfg_esp_color[1], cheat.cfg_esp_color[2], cheat.cfg_esp_color[3]), esp_thickness);
+                    draw_list->AddLine(p4_esp, p5_esp, IM_COL32(cheat.cfg_esp_color[0], cheat.cfg_esp_color[1], cheat.cfg_esp_color[2], cheat.cfg_esp_color[3]), esp_thickness);
+                    draw_list->AddLine(p6_esp, p3_esp, IM_COL32(cheat.cfg_esp_color[0], cheat.cfg_esp_color[1], cheat.cfg_esp_color[2], cheat.cfg_esp_color[3]), esp_thickness);
+                    draw_list->AddLine(p6_esp, p7_esp, IM_COL32(cheat.cfg_esp_color[0], cheat.cfg_esp_color[1], cheat.cfg_esp_color[2], cheat.cfg_esp_color[3]), esp_thickness);
+                    draw_list->AddLine(p7_esp, p1_esp, IM_COL32(cheat.cfg_esp_color[0], cheat.cfg_esp_color[1], cheat.cfg_esp_color[2], cheat.cfg_esp_color[3]), esp_thickness);
+                    draw_list->AddLine(p7_esp, p4_esp, IM_COL32(cheat.cfg_esp_color[0], cheat.cfg_esp_color[1], cheat.cfg_esp_color[2], cheat.cfg_esp_color[3]), esp_thickness);
+                    draw_list->AddLine(p8_esp, p6_esp, IM_COL32(cheat.cfg_esp_color[0], cheat.cfg_esp_color[1], cheat.cfg_esp_color[2], cheat.cfg_esp_color[3]), esp_thickness);*/
+
+
                     draw_list->AddText(ImVec2((float)p1_esp.x, (float)p1_esp.y - 20), 0xFFFFFFFF, "Health: ");
-                    draw_list->AddText(ImVec2((float)p1_esp.x + 55, (float)p1_esp.y - 20), healthColor, std::to_string(enemyHp).c_str());
+                    draw_list->AddText(ImVec2((float)p1_esp.x + 55, (float)p1_esp.y - 20), healthColor, (std::to_string(enemyHp) + "%").c_str());
+                    draw_list->AddText(ImVec2((float)p1_esp.x, (float)p1_esp.y - 33), 0xFFFFFFFF, "Distance: ");
+                    draw_list->AddText(ImVec2((float)p1_esp.x + 65, (float)p1_esp.y - 33), 0xFFFFFFFF, (std::to_string((int)distance)).c_str());
+                    draw_list->AddText(ImVec2((float)p1_esp.x, (float)p1_esp.y - 46), 0xFFFFFFFF, "Level: ");
+                    //draw_list->AddRect(p1_health, p2_health, healthColor, 5.0f);
                     draw_list->AddRectFilled(p1_health, p2_health, healthColor, 5.0f);
                 }
-                enemyCoords = enemyCoords->next;
+                entityArr = entityArr->next;
             }
              //Sleep(1000);
         }
 
-        if (cheat.cfg_aimbot) {
+        if (cheat.cfg_aimbot && (GetAsyncKeyState(VK_LMENU) & 0x8000)) {
             cheat.Aimbot();
         }
 
@@ -270,8 +443,12 @@ int main(int, char**)
             cheat.flyHack();
         }
 
+        if (cheat.cfg_infinite_ammo) {
+            cheat.infAMmo();
+        }
+
         if (cheat.cfg_unlimited_armor) {
-            cheat.unlimitedArmor();
+            //cheat.unlimitedArmor();
         }
 
         if (cheat.cfg_god_mode) {
